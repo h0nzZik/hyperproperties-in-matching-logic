@@ -1,9 +1,8 @@
 
-From MatchingLogic Require Import Signature locally_nameless Theories.Definedness.
+From MatchingLogic Require Import Signature locally_nameless DefaultVariables Theories.Definedness Theories.Sorts.
+
 Module LTL.
   Import MLNotations.
-  Import Theories.Definedness.
-  Import Theories.Sorts.
 
   Record LTLSignature :=
     { AP : Set;
