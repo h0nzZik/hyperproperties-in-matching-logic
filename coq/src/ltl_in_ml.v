@@ -22,8 +22,8 @@ Module LTL.
     Inductive Symbols :=
     | sym_import_definedness (d : Definedness.Symbols)
     | sym_import_sorts (s : Sorts.Symbols)
-    | sym_SortInitialState
-    | sym_SortState
+    | sym_SortTrace
+    | sym_SortTraceSuffix
     | sym_next
     | sym_prev
     | sym_a (ap : AP ltlsig)
@@ -96,8 +96,8 @@ Module LTL.
 
     Notation "A : B ⇀ C" := (patt_partial_function A B C) (at level 80) : ml_scope.
     
-    Notation InitialState := (sym sym_SortInitialState).
-    Notation State := (sym sym_SortState).
+    Notation Trace := (sym sym_SortTrace).
+    Notation TraceSuffix := (sym sym_SortTraceSuffix).
 
     Definition next (phi : Pattern) : Pattern :=
       patt_app (sym sym_next) phi.
@@ -110,8 +110,8 @@ Module LTL.
     Inductive AxiomName :=
     | AxImportedDefinedness (name : Definedness.AxiomName) (* imports axioms from the Definedness module *)
     | AxPrev
-    | AxInitialState (* Trace *)
-    | AxState (* TraceSuffix *)
+    | AxTrace
+    | AxTraceSuffix
     | AxInf
     | AxNextOut
     | AxNextPFun
@@ -126,26 +126,26 @@ Module LTL.
       | AxPrev
         => (prev x == (∃, b0 and (x ∈ ∘b0 )))%ml
                                             
-      | AxInitialState
-        => (∃,([[ InitialState ]] == b0))%ml
+      | AxTrace
+        => (∃,([[ Trace ]] == b0))%ml
                                          
-      | AxState
-        => ([[ State ]] == (μ, ([[ InitialState ]] or (prev B0))))%ml
+      | AxTraceSuffix
+        => ([[ TraceSuffix ]] == (μ, ([[ Trace ]] or (prev B0))))%ml
 
       | AxInf
-        => ([[ State ]] ⊆ ∘ ([[ State ]]))%ml
+        => ([[ TraceSuffix ]] ⊆ ∘ ([[ TraceSuffix ]]))%ml
 
       | AxNextOut
-        => ((∘(¬([[ State ]]))) ⊆ (¬ [[ State ]]))%ml
+        => ((∘(¬([[ TraceSuffix ]]))) ⊆ (¬ [[ TraceSuffix ]]))%ml
 
       | AxNextPFun
-        => (sym sym_next) : State ⇀ State
+        => (sym sym_next) : TraceSuffix ⇀ TraceSuffix
 
       | AxNextInj
-        => patt_forall_of_sort State (patt_forall_of_sort State ( ( (∘b0 == ∘b1) and (¬ (∘b1 == ⊥))  ) ---> (b0 == b1)  ))
+        => patt_forall_of_sort TraceSuffix (patt_forall_of_sort TraceSuffix ( ( (∘b0 == ∘b1) and (¬ (∘b1 == ⊥))  ) ---> (b0 == b1)  ))
 
       | AxAtomicProp a
-        => (sym (sym_a a)) ⊆ [[ State ]]
+        => (sym (sym_a a)) ⊆ [[ TraceSuffix ]]
       end.
 
 
