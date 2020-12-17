@@ -1,6 +1,6 @@
 From Coq Require Import String Ensembles.
 Require Import ltl.
-From MatchingLogic Require Import Logic Theories.Definedness Theories.Sorts.
+From MatchingLogic Require Import Logic Theories.Definedness Theories.Sorts SignatureHelper.
 
 
 Print Model.
@@ -38,12 +38,10 @@ Module LTL.
       * apply (AP_dec ltlsig).
     Qed.
 
-    
-    Instance signature : Signature :=
-      {| symbols := Symbols;
-         sym_eq := Symbols_dec;
-         variables := DefaultMLVariables;
-      |}.
+
+    Instance symbols_H : SymbolsH := {| SHSymbols := Symbols; SHSymbols_dec := Symbols_dec; |}.
+    Instance signature : Signature := @SignatureFromSymbols symbols_H.
+    Arguments signature : simpl never. (* does not really help :-( *)
 
     Instance definedness_syntax : Definedness.Syntax :=
       {|
@@ -55,16 +53,7 @@ Module LTL.
       Sorts.inj := sym_import_sorts;
       Sorts.imported_definedness := definedness_syntax;
       |}.
-
-
-    Definition sym (s : Symbols) : @Pattern signature :=
-      @patt_sym signature s.
-    Definition evar (sname : string) : @Pattern signature :=
-      @patt_free_evar signature (find_fresh_evar_name (@evar_c sname) nil).
-    Definition svar (sname : string) : @Pattern signature :=
-      @patt_free_svar signature (find_fresh_svar_name (@svar_c sname) nil)
-    .
-
+    
     Notation "A → B" := (patt_imp A B) (at level 90, right associativity, B at level 200) : ml_scope.
     (*
     Notation "A /\ B" := (patt_and A B) (at level 80, right associativity) : ml_scope.
@@ -125,7 +114,8 @@ Module LTL.
       | AxImportedDefinedness name' => Definedness.axiom name'
                                                          
       | AxPrev
-        => (prev x == (∃, b0 and (x ∈ ∘b0 )))%ml
+          (* TODO make `and` bind tighter than `∃,` *)
+        => (prev x == (∃, (b0 and (x ∈ ∘b0 ))))%ml
                                             
       | AxTrace
         => (∃,([[ Trace ]] == b0))%ml
@@ -157,7 +147,7 @@ Module LTL.
 
     (* Mnext, Mprev and their properties *)
     Section basics.
-      Context {M : @Model signature}.
+      Context {M : Model}.
       Hypothesis M_satisfies_theory : M ⊨ᵀ theory.
 
       Definition Mnext m := app_ext (sym_interp sym_next) (Singleton (Domain M) m).
@@ -172,7 +162,8 @@ Module LTL.
           In (Domain M) (Mnext m2) m1 <-> In (Domain M) (Mprev m1) m2.
       Proof.
         pose proof (Hprev := satisfies_theory_impl_satisfies_named_axiom M_satisfies_theory AxPrev).
-        simpl in Hprev. unfold satisfies_model in Hprev.
+        cbn in Hprev.
+        unfold satisfies_model in Hprev.
         intros.
         remember ((fun x : evar_name => m1)) as evar_val.
         remember (fun X : svar_name => Empty_set (Domain M)) as svar_val.
@@ -187,6 +178,23 @@ Module LTL.
         rewrite pattern_interpretation_free_evar_simpl in Hprev.
         fold LTL.x in Hprev. subst. simpl in Hprev.
         fold (Mprev m1) in Hprev.
+
+        remember ((fun x : evar_name => m1)) as evar_val.
+        remember (fun X : svar_name => Empty_set (Domain M)) as svar_val.
+        pose proof (Hbuild := @pattern_interpretation_set_builder signature M (x ∈ ∘ b0) evar_val svar_val).
+        cbn zeta in Hbuild.
+        fold signature in *.
+        rewrite -> Hbuild in Hprev.
+        2: { autorewrite with ml_db. (* TODO need rewriting lemmas for the sugar (`\in` etc).*) admit. }
+        (* TODO make `simpl` not simplify ands, ors etc to implications *)
+        (* TODO make a hint database to solve M_predicate goals *)
+        rewrite -> pattern_interpretation_set_builder in Hprev. (* Blocked by evar_open *)
+
+
+        
+        destruct Hprev as [Hprev1 Hprev2].
+
+        Search Same_set eq.
       Admitted.
       
     End basics.
