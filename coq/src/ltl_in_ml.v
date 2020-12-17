@@ -1,9 +1,14 @@
+From Coq Require Import String Ensembles.
+Require Import ltl.
+From MatchingLogic Require Import Logic Theories.Definedness Theories.Sorts.
 
-From MatchingLogic Require Import Signature locally_nameless DefaultVariables Theories.Definedness Theories.Sorts.
+
+Print Model.
 
 Module LTL.
-  Import MLNotations.
+  Import MatchingLogic.Syntax.Notations.
 
+  (* Should this be a type class too? *)
   Record LTLSignature :=
     { AP : Set;
       AP_dec : forall (a1 a2 : AP), {a1 = a2} + {a1 <> a2};
@@ -33,13 +38,11 @@ Module LTL.
     Qed.
 
     
-    Let signature : Signature :=
+    Instance signature : Signature :=
       {| symbols := Symbols;
          sym_eq := Symbols_dec;
          variables := DefaultMLVariables;
       |}.
-    #[local]
-     Canonical Structure signature.
 
     Instance definedness_syntax : Definedness.Syntax :=
       {|
@@ -53,17 +56,19 @@ Module LTL.
       |}.
 
 
-    Let sym (s : Symbols) : @Pattern signature :=
+    Definition sym (s : Symbols) : @Pattern signature :=
       @patt_sym signature s.
-    Let evar (sname : string) : @Pattern signature :=
+    Definition evar (sname : string) : @Pattern signature :=
       @patt_free_evar signature (find_fresh_evar_name (@evar_c sname) nil).
-    Let svar (sname : string) : @Pattern signature :=
+    Definition svar (sname : string) : @Pattern signature :=
       @patt_free_svar signature (find_fresh_svar_name (@svar_c sname) nil)
     .
 
     Notation "A → B" := (patt_imp A B) (at level 90, right associativity, B at level 200) : ml_scope.
+    (*
     Notation "A /\ B" := (patt_and A B) (at level 80, right associativity) : ml_scope.
     Notation "A ‌\/ B" := (patt_or A B) (at level 85, right associativity) : ml_scope.
+    *)
     Notation "∃, A" := (ex, A) (at level 55) : ml_scope.
     Notation "μ, A" := (mu, A) (at level 55) : ml_scope.
     Notation "A == B" := (patt_equal A B) (at level 100) : ml_scope.
@@ -119,7 +124,7 @@ Module LTL.
       | AxImportedDefinedness name' => Definedness.axiom name'
                                                          
       | AxPrev
-        => (prev x == (∃, b0 /\ (x ∈ ∘b0 )))%ml
+        => (prev x == (∃, b0 and (x ∈ ∘b0 )))%ml
                                             
       | AxInitialState
         => (∃,([[ InitialState ]] == b0))%ml
@@ -137,16 +142,55 @@ Module LTL.
         => (sym sym_next) : State ⇀ State
 
       | AxNextInj
-        => patt_forall_of_sort State (patt_forall_of_sort State ( ( (∘b0 == ∘b1) and (¬ (∘b1 == ⊥))  ) --> (b0 == b1)  ))
+        => patt_forall_of_sort State (patt_forall_of_sort State ( ( (∘b0 == ∘b1) and (¬ (∘b1 == ⊥))  ) ---> (b0 == b1)  ))
 
       | AxAtomicProp a
         => (sym (sym_a a)) ⊆ [[ State ]]
       end.
 
 
-    Definition satisfies_axioms (M : Model) := forall (ax_name : AxiomName),    
+    Definition satisfies_axioms (M : MatchingLogic.Semantics.Model) := forall (ax_name : AxiomName),    
         satisfies_model M (axiom ax_name).
-    
+
+    (* Mnext, Mprev and their properties *)
+    Section basics.
+      Context {M : @Model signature}.
+      Hypothesis M_satisfies_axioms : satisfies_axioms M.
+
+      Definition Mnext m := app_ext (sym_interp sym_next) (Singleton (Domain M) m).
+      Definition Mnext_ext (A : Power (Domain M)) : Power (Domain M) :=
+        fun (e : Domain M) => exists (m : Domain M), In (Domain M) A m /\ In (Domain M) (Mnext m) e.
+
+      Definition Mprev m := app_ext (sym_interp sym_prev) (Singleton (Domain M) m).
+      Definition Mprev_ext (A : Power (Domain M)) : Power (Domain M) :=
+        fun (e : Domain M) => exists (m : Domain M), In (Domain M) A m /\ In (Domain M) (Mprev m) e.
+
+      Lemma Mnext_Mprev_inversions : forall (m1 m2 : Domain M),
+          In (Domain M) (Mnext m2) m1 <-> In (Domain M) (Mprev m1) m2.
+      Proof.
+        Print AxiomName.
+        pose proof (Hprev := M_satisfies_axioms AxPrev).
+        simpl in Hprev. unfold satisfies_model in Hprev.
+        intros.
+        Print EVarVal.
+        Check evar_name.
+        remember ((fun x : evar_name => m1)) as evar_val.
+        remember (fun X : svar_name => Empty_set (Domain M)) as svar_val.
+        specialize (Hprev evar_val svar_val).
+        apply equal_impl_interpr_same in Hprev.
+        unfold Same_set in Hprev. unfold Included in Hprev. unfold In in Hprev.
+        unfold prev in Hprev.
+        rewrite pattern_interpretation_app_simpl in Hprev.
+        unfold sym in Hprev.
+        rewrite pattern_interpretation_sym_simpl in Hprev.
+        unfold LTL.x in Hprev.
+        rewrite pattern_interpretation_free_evar_simpl in Hprev.
+        fold LTL.x in Hprev. subst. simpl in Hprev.
+        fold (Mprev m1) in Hprev.
+      Admitted.
+      
+    End basics.
+      
     
   End LTL.
 

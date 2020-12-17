@@ -1,2 +1,3 @@
 -R src hltlInMl
-src/ltl-in-ml.v
+src/ltl.v
+src/ltl_in_ml.v
