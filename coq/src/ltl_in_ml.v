@@ -7,6 +7,7 @@ Print Model.
 
 Module LTL.
   Import MatchingLogic.Syntax.Notations.
+  Import MatchingLogic.Semantics.Notations.
 
   (* Should this be a type class too? *)
   Record LTLSignature :=
@@ -148,6 +149,8 @@ Module LTL.
         => (sym (sym_a a)) ⊆ [[ TraceSuffix ]]
       end.
 
+    Definition named_axioms : NamedAxioms := {| NAName := AxiomName; NAAxiom := axiom; |}.
+    Definition theory := theory_of_NamedAxioms named_axioms.
 
     Definition satisfies_axioms (M : MatchingLogic.Semantics.Model) := forall (ax_name : AxiomName),    
         satisfies_model M (axiom ax_name).
@@ -155,7 +158,7 @@ Module LTL.
     (* Mnext, Mprev and their properties *)
     Section basics.
       Context {M : @Model signature}.
-      Hypothesis M_satisfies_axioms : satisfies_axioms M.
+      Hypothesis M_satisfies_theory : M ⊨ᵀ theory.
 
       Definition Mnext m := app_ext (sym_interp sym_next) (Singleton (Domain M) m).
       Definition Mnext_ext (A : Power (Domain M)) : Power (Domain M) :=
@@ -168,12 +171,9 @@ Module LTL.
       Lemma Mnext_Mprev_inversions : forall (m1 m2 : Domain M),
           In (Domain M) (Mnext m2) m1 <-> In (Domain M) (Mprev m1) m2.
       Proof.
-        Print AxiomName.
-        pose proof (Hprev := M_satisfies_axioms AxPrev).
+        pose proof (Hprev := satisfies_theory_impl_satisfies_named_axiom M_satisfies_theory AxPrev).
         simpl in Hprev. unfold satisfies_model in Hprev.
         intros.
-        Print EVarVal.
-        Check evar_name.
         remember ((fun x : evar_name => m1)) as evar_val.
         remember (fun X : svar_name => Empty_set (Domain M)) as svar_val.
         specialize (Hprev evar_val svar_val).
