@@ -5,6 +5,7 @@ Unset Printing Implicit Defensive.
 
 From Coq Require Import String Ensembles.
 From Coq.Logic Require Import FunctionalExtensionality.
+From stdpp Require Import sets.
 
 Require Import ltl.
 From MatchingLogic Require Import Logic Theories.Definedness Theories.Sorts SignatureHelper.
@@ -61,7 +62,7 @@ Module LTL.
       Sorts.imported_definedness := definedness_syntax;
       |}.
     
-    Notation "A → B" := (patt_imp A B) (at level 90, right associativity, B at level 200) : ml_scope.
+    Notation "A → B" := (patt_imp A B) (at level 99, right associativity, B at level 200) : ml_scope.
     (*
     Notation "A /\ B" := (patt_and A B) (at level 80, right associativity) : ml_scope.
     Notation "A ‌\/ B" := (patt_or A B) (at level 85, right associativity) : ml_scope.
@@ -183,16 +184,16 @@ Module LTL.
       Context {M : Model}.
       Hypothesis M_satisfies_theory : M ⊨ᵀ theory.
 
-      Definition Mnext m := app_ext (sym_interp sym_next) (Singleton (Domain M) m).
+      Definition Mnext m := app_ext (sym_interp sym_next) (Ensembles.Singleton (Domain M) m).
       Definition Mnext_ext (A : Power (Domain M)) : Power (Domain M) :=
-        fun (e : Domain M) => exists (m : Domain M), In (Domain M) A m /\ In (Domain M) (Mnext m) e.
+        fun (e : Domain M) => exists (m : Domain M), Ensembles.In (Domain M) A m /\ Ensembles.In (Domain M) (Mnext m) e.
 
-      Definition Mprev m := app_ext (sym_interp sym_prev) (Singleton (Domain M) m).
+      Definition Mprev m := app_ext (sym_interp sym_prev) (Ensembles.Singleton (Domain M) m).
       Definition Mprev_ext (A : Power (Domain M)) : Power (Domain M) :=
-        fun (e : Domain M) => exists (m : Domain M), In (Domain M) A m /\ In (Domain M) (Mprev m) e.
+        fun (e : Domain M) => exists (m : Domain M), Ensembles.In (Domain M) A m /\ Ensembles.In (Domain M) (Mprev m) e.
       
       Lemma Mnext_Mprev_inversions : forall (m1 m2 : Domain M),
-          In (Domain M) (Mnext m2) m1 <-> In (Domain M) (Mprev m1) m2.
+          Ensembles.In (Domain M) (Mnext m2) m1 <-> Ensembles.In (Domain M) (Mprev m1) m2.
       Proof.
         pose proof (Hprev := satisfies_theory_impl_satisfies_named_axiom M_satisfies_theory AxPrev).
         cbn in Hprev.
@@ -236,9 +237,22 @@ Module LTL.
         move=> Hprev.
         clear Hbuild.
 
-        unfold In.
+        unfold Ensembles.In.
         rewrite -> Hprev.
-        simpl.
+        Check free_evar_in_patt.
+        (*autorewrite with ml_db.*)
+        (*simpl.*)
+        (*unfold fresh_evar at 3.*)
+        Search evar_open patt_in.
+        unfold signature in *.
+        (*rewrite -> evar_open_in.*)
+        (*Set Printing Implicit.*)
+        remember (evar_open 0 (fresh_evar (x ∈ ∘ b0)) x) as y.
+        unfold signature in Heqy. (* This is really annoying! *)
+        rewrite <- Heqy. (* just a test *)
+        rewrite -> Heqy.
+        unfold x at 3.
+        rewrite -> evar_open_free_evar.
         rewrite <- free_evar_in_patt. 2: auto.
         rewrite [∘ patt_free_evar _] /next.
         rewrite -> pattern_interpretation_app_simpl.
@@ -247,9 +261,23 @@ Module LTL.
         rewrite -> pattern_interpretation_sym_simpl.
         unfold In.
         rewrite -> pattern_interpretation_free_evar_simpl.
-        Search update_evar_val. rewrite -> update_evar_val_same.
-        unfold fresh_evar. (* TODO free_evars autorewrite *)
-      Admitted.
+        rewrite -> update_evar_val_same.
+        Check find_fresh_evar_name.
+        Check set_evar_fresh_is_fresh.
+        pose proof (Hfr := @set_evar_fresh_is_fresh signature (x ∈ ∘b0)%ml).
+        
+        unfold fresh_evar. simpl.
+        Search union empty.
+        repeat rewrite -> union_empty_r_L.
+        rewrite -> union_empty_l_L.
+        rewrite -> update_evar_val_neq.
+        2: {
+          Search find_fresh_evar_name'.
+          eapply extralibrary.notin_cons_l.
+          apply find_fresh_evar_name'_is_fresh.
+        }
+        subst evar_val. unfold Ensembles.In. auto.
+      Qed.
       
     End basics.
       
