@@ -1,4 +1,11 @@
+From Coq Require Import ssreflect ssrfun ssrbool.
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
+
 From Coq Require Import String Ensembles.
+From Coq.Logic Require Import FunctionalExtensionality.
+
 Require Import ltl.
 From MatchingLogic Require Import Logic Theories.Definedness Theories.Sorts SignatureHelper.
 
@@ -35,7 +42,7 @@ Module LTL.
       decide equality.
       * decide equality.
       * decide equality.
-      * apply (AP_dec ltlsig).
+      * apply AP_dec.
     Qed.
 
 
@@ -194,7 +201,7 @@ Module LTL.
         remember ((fun x : evar_name => m1)) as evar_val.
         remember (fun X : svar_name => Empty_set (Domain M)) as svar_val.
         specialize (Hprev evar_val svar_val).
-        apply equal_impl_interpr_same in Hprev. 2: auto.
+        apply equal_iff_interpr_same in Hprev. 2: auto.
         unfold Same_set in Hprev. unfold Included in Hprev. unfold In in Hprev.
         unfold prev in Hprev.
         rewrite pattern_interpretation_app_simpl in Hprev.
@@ -211,21 +218,37 @@ Module LTL.
         cbn zeta in Hbuild.
         fold signature in *.
         rewrite -> Hbuild in Hprev.
-        2: { Unset Printing Implicit.
-             unfold signature in *.
+        2: { unfold signature in *.
              autorewrite with ml_db. simpl.
-             Search M_predicate T_predicate.
-             admit. }
+             apply T_predicate_in. auto.
+        }
+        
         (* TODO make `simpl` not simplify ands, ors etc to implications *)
         (* TODO make a hint database to solve M_predicate goals *)
         (* TODO solve M |= theory automatically *)
-        rewrite -> pattern_interpretation_set_builder in Hprev. (* Blocked by evar_open *)
+        autorewrite with ml_db in Hprev.
 
+        (* simplify Hprev, but not too much *)
+        cbn delta in Hprev.
+        move: Hprev.
+        rewrite [PeanoNat.Nat.eqb 0 0]/=.
+        cbv iota.
+        move=> Hprev.
+        clear Hbuild.
 
-        
-        destruct Hprev as [Hprev1 Hprev2].
-
-        Search Same_set eq.
+        unfold In.
+        rewrite -> Hprev.
+        simpl.
+        rewrite <- free_evar_in_patt. 2: auto.
+        rewrite [∘ patt_free_evar _] /next.
+        rewrite -> pattern_interpretation_app_simpl.
+        rewrite /Mnext.
+        unfold sym.
+        rewrite -> pattern_interpretation_sym_simpl.
+        unfold In.
+        rewrite -> pattern_interpretation_free_evar_simpl.
+        Search update_evar_val. rewrite -> update_evar_val_same.
+        unfold fresh_evar. (* TODO free_evars autorewrite *)
       Admitted.
       
     End basics.
