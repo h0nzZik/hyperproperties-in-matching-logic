@@ -94,6 +94,17 @@ Module LTL.
     
     Definition prev (phi : Pattern) : Pattern :=
       patt_app (sym sym_prev) phi.
+
+    
+   Lemma evar_open_next db x ϕ: evar_open db x (next ϕ) = next (evar_open db x ϕ).
+   Proof. unfold next. auto. Qed.
+   Lemma svar_open_next db x ϕ: svar_open db x (next ϕ) = next (svar_open db x ϕ).
+   Proof. unfold next. auto. Qed.
+   Lemma evar_open_prev db x ϕ: evar_open db x (prev ϕ) = prev (evar_open db x ϕ).
+   Proof. unfold prev. auto. Qed.
+   Lemma svar_open_prev db x ϕ: svar_open db x (prev ϕ) = prev (svar_open db x ϕ).
+   Proof. unfold prev. auto. Qed.
+   Hint Rewrite -> evar_open_next svar_open_next evar_open_prev svar_open_prev : ml_db.
     
     Notation "∘ X" := (next X) (at level 50) : ml_scope.
 
@@ -142,9 +153,24 @@ Module LTL.
     Definition named_axioms : NamedAxioms := {| NAName := AxiomName; NAAxiom := axiom; |}.
     Definition theory := theory_of_NamedAxioms named_axioms.
 
-    Definition satisfies_axioms (M : MatchingLogic.Semantics.Model) := forall (ax_name : AxiomName),    
-        satisfies_model M (axiom ax_name).
+    Program Definition definedness_axioms_included_in_axioms :=
+      @Build_NamedAxiomsIncluded signature Definedness.named_axioms named_axioms AxImportedDefinedness _.
+    Next Obligation.
+      intros n. simpl. reflexivity.
+    Qed.
+    
+    Lemma satisfies_theory_impl_satisfies_definedness_theory M:
+      M ⊨ᵀ theory -> M ⊨ᵀ Definedness.theory.
+    Proof.
+      intros H.
+      apply satisfies_theory_subseteq with (Γ₂ := theory). 2: assumption.
+      apply NamedAxiomsIncluded_impl_TheoryIncluded.
+      apply definedness_axioms_included_in_axioms.
+    Qed.
 
+    Hint Resolve satisfies_theory_impl_satisfies_definedness_theory : core.
+    
+   
     (* Mnext, Mprev and their properties *)
     Section basics.
       Context {M : Model}.
@@ -157,7 +183,7 @@ Module LTL.
       Definition Mprev m := app_ext (sym_interp sym_prev) (Singleton (Domain M) m).
       Definition Mprev_ext (A : Power (Domain M)) : Power (Domain M) :=
         fun (e : Domain M) => exists (m : Domain M), In (Domain M) A m /\ In (Domain M) (Mprev m) e.
-
+      
       Lemma Mnext_Mprev_inversions : forall (m1 m2 : Domain M),
           In (Domain M) (Mnext m2) m1 <-> In (Domain M) (Mprev m1) m2.
       Proof.
@@ -168,7 +194,7 @@ Module LTL.
         remember ((fun x : evar_name => m1)) as evar_val.
         remember (fun X : svar_name => Empty_set (Domain M)) as svar_val.
         specialize (Hprev evar_val svar_val).
-        apply equal_impl_interpr_same in Hprev.
+        apply equal_impl_interpr_same in Hprev. 2: auto.
         unfold Same_set in Hprev. unfold Included in Hprev. unfold In in Hprev.
         unfold prev in Hprev.
         rewrite pattern_interpretation_app_simpl in Hprev.
@@ -185,9 +211,14 @@ Module LTL.
         cbn zeta in Hbuild.
         fold signature in *.
         rewrite -> Hbuild in Hprev.
-        2: { autorewrite with ml_db. (* TODO need rewriting lemmas for the sugar (`\in` etc).*) admit. }
+        2: { Unset Printing Implicit.
+             unfold signature in *.
+             autorewrite with ml_db. simpl.
+             Search M_predicate T_predicate.
+             admit. }
         (* TODO make `simpl` not simplify ands, ors etc to implications *)
         (* TODO make a hint database to solve M_predicate goals *)
+        (* TODO solve M |= theory automatically *)
         rewrite -> pattern_interpretation_set_builder in Hprev. (* Blocked by evar_open *)
 
 
