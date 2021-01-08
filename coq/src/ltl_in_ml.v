@@ -10,19 +10,11 @@ From stdpp Require Import sets.
 Require Import ltl.
 From MatchingLogic Require Import Logic Theories.Definedness Theories.Sorts SignatureHelper.
 
-
-Print Model.
+Import BoundVarSugar.
 
 Module LTL.
   Import MatchingLogic.Syntax.Notations.
   Import MatchingLogic.Semantics.Notations.
-
-  (* Should this be a type class too? *)
-  Record LTLSignature :=
-    { AP : Set;
-      AP_dec : forall (a1 a2 : AP), {a1 = a2} + {a1 <> a2};
-    }.
-  
   
   Section LTL.
     (* We are parametrized with a set of atomic proposition. *)
@@ -74,17 +66,20 @@ Module LTL.
     Notation "A ⊆ B" := (patt_subseteq A B) (at level 70) : ml_scope.
     Notation "⊥" := (patt_bott) : ml_scope.
 
-    Notation "[[ A ]]" := (inhabitant_set A) : ml_scope.
+    Notation "[[ A ]]" := (patt_inhabitant_set A) : ml_scope.
 
     (* Element variables - free *)
     Notation x := (evar "x").
     Notation y := (evar "y").
     Notation z := (evar "z").
 
+    (*
     (* Element variables - bound *)
     Notation b0 := (patt_bound_evar 0).
     Notation b1 := (patt_bound_evar 1).
+    *)
 
+    (* TODO move to BoundVarSugar *)
     (* Set variables - bound *)
     Notation B0 := (patt_bound_svar 0).
 
@@ -125,9 +120,11 @@ Module LTL.
     | AxNextOut
     | AxNextPFun
     | AxNextInj
+    | AxPrevTFun
+    | AxPrevInj
     | AxAtomicProp (ap : AP ltlsig) (* defines a potentially infinite class of axioms *)
     .
-
+Check patt_partial_function_injective.
     Definition axiom(name : AxiomName) : @Pattern signature :=
       match name with
       | AxImportedDefinedness name' => Definedness.axiom name'
@@ -152,7 +149,13 @@ Module LTL.
         => (sym sym_next) : TraceSuffix ⇀ TraceSuffix
 
       | AxNextInj
-        => patt_forall_of_sort TraceSuffix (patt_forall_of_sort TraceSuffix ( ( (∘b0 == ∘b1) and (¬ (∘b1 == ⊥))  ) ---> (b0 == b1)  ))
+        => patt_partial_function_injective (sym sym_next) TraceSuffix
+
+      | AxPrevTFun
+        => patt_total_function (sym sym_prev) TraceSuffix TraceSuffix
+                               
+      | AxPrevInj
+        => patt_total_function_injective (sym sym_prev) TraceSuffix
 
       | AxAtomicProp a
         => (sym (sym_a a)) ⊆ [[ TraceSuffix ]]
@@ -184,6 +187,7 @@ Module LTL.
       Context {M : Model}.
       Hypothesis M_satisfies_theory : M ⊨ᵀ theory.
 
+      Check sym_next.
       Definition Mnext m := app_ext (sym_interp sym_next) (Ensembles.Singleton (Domain M) m).
       Definition Mnext_ext (A : Power (Domain M)) : Power (Domain M) :=
         fun (e : Domain M) => exists (m : Domain M), Ensembles.In (Domain M) A m /\ Ensembles.In (Domain M) (Mnext m) e.
@@ -191,7 +195,8 @@ Module LTL.
       Definition Mprev m := app_ext (sym_interp sym_prev) (Ensembles.Singleton (Domain M) m).
       Definition Mprev_ext (A : Power (Domain M)) : Power (Domain M) :=
         fun (e : Domain M) => exists (m : Domain M), Ensembles.In (Domain M) A m /\ Ensembles.In (Domain M) (Mprev m) e.
-      
+
+      (* TODO generalized version in the library *)
       Lemma Mnext_Mprev_inversions : forall (m1 m2 : Domain M),
           Ensembles.In (Domain M) (Mnext m2) m1 <-> Ensembles.In (Domain M) (Mprev m1) m2.
       Proof.
@@ -262,24 +267,28 @@ Module LTL.
         unfold In.
         rewrite -> pattern_interpretation_free_evar_simpl.
         rewrite -> update_evar_val_same.
-        Check find_fresh_evar_name.
-        Check set_evar_fresh_is_fresh.
-        pose proof (Hfr := @set_evar_fresh_is_fresh signature (x ∈ ∘b0)%ml).
         
         unfold fresh_evar. simpl.
-        Search union empty.
         repeat rewrite -> union_empty_r_L.
         rewrite -> union_empty_l_L.
         rewrite -> update_evar_val_neq.
         2: {
-          Search find_fresh_evar_name'.
           eapply extralibrary.notin_cons_l.
           apply find_fresh_evar_name'_is_fresh.
         }
         subst evar_val. unfold Ensembles.In. auto.
       Qed.
+
+      (* We may use this to represent partial functions *)
+      Definition empty_or_singleton S := S = Empty \/ exists m', S = Ensembles.Singleton (Domain M) m'.
       
     End basics.
+
+    (* Conversion function *)
+    Fixpoint L2M (f: @ltl.Formula ltlsig) : Pattern :=
+      match f with
+      | _ => patt_bott
+      end.
       
     
   End LTL.

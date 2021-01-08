@@ -1,17 +1,23 @@
 Require Import Ensembles.
 Section ltl.
 
-  Context {AP : Set}.
+  (* Should this be a type class too? *)
+  Record LTLSignature :=
+    { AP : Set;
+      AP_dec : forall (a1 a2 : AP), {a1 = a2} + {a1 <> a2};
+    }.
+
+  Context {sig : LTLSignature}.
 
   Inductive Formula :=
-  | f_atomic (a : AP)
+  | f_atomic (a : AP sig)
   | f_neg (f : Formula)
   | f_and (f1 f2 : Formula)
   | f_next (f : Formula)
   | f_until (f1 f2 : Formula)
   .
 
-  Definition Model : Type := nat -> Ensemble AP.
+  Definition Model : Type := nat -> Ensemble (AP sig).
 
   Fixpoint satisfies (m: Model) (i : nat) (f : Formula) : Prop :=
     match f with
