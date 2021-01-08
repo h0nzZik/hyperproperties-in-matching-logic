@@ -92,31 +92,36 @@ Module LTL.
     Notation Trace := (sym sym_SortTrace).
     Notation TraceSuffix := (sym sym_SortTraceSuffix).
 
-    Definition next (phi : Pattern) : Pattern :=
+    Definition patt_next (phi : Pattern) : Pattern :=
       patt_app (sym sym_next) phi.
     
-    Definition prev (phi : Pattern) : Pattern :=
+    Definition patt_prev (phi : Pattern) : Pattern :=
       patt_app (sym sym_prev) phi.
 
     
-   Lemma evar_open_next db x ϕ: evar_open db x (next ϕ) = next (evar_open db x ϕ).
-   Proof. unfold next. auto. Qed.
-   Lemma svar_open_next db x ϕ: svar_open db x (next ϕ) = next (svar_open db x ϕ).
-   Proof. unfold next. auto. Qed.
-   Lemma evar_open_prev db x ϕ: evar_open db x (prev ϕ) = prev (evar_open db x ϕ).
-   Proof. unfold prev. auto. Qed.
-   Lemma svar_open_prev db x ϕ: svar_open db x (prev ϕ) = prev (svar_open db x ϕ).
-   Proof. unfold prev. auto. Qed.
+   Lemma evar_open_next db x ϕ: evar_open db x (patt_next ϕ) = patt_next (evar_open db x ϕ).
+   Proof. unfold patt_next. auto. Qed.
+   Lemma svar_open_next db x ϕ: svar_open db x (patt_next ϕ) = patt_next (svar_open db x ϕ).
+   Proof. unfold patt_next. auto. Qed.
+   Lemma evar_open_prev db x ϕ: evar_open db x (patt_prev ϕ) = patt_prev (evar_open db x ϕ).
+   Proof. unfold patt_prev. auto. Qed.
+   Lemma svar_open_prev db x ϕ: svar_open db x (patt_prev ϕ) = patt_prev (svar_open db x ϕ).
+   Proof. unfold patt_prev. auto. Qed.
    Hint Rewrite -> evar_open_next svar_open_next evar_open_prev svar_open_prev : ml_db.
-    
-    Notation "∘ X" := (next X) (at level 50) : ml_scope.
+   (* TODO typeclass instance *)
+
+
+   (* TODO nest_mu *)
+   Definition patt_until ϕ₁ ϕ₂ := patt_mu (patt_or ϕ₂ (patt_and ϕ₁ (patt_next B0))).
+   
+    Notation "∘ X" := (patt_next X) (at level 50) : ml_scope.
 
     Inductive AxiomName :=
     | AxImportedDefinedness (name : Definedness.AxiomName) (* imports axioms from the Definedness module *)
     | AxPrev
     | AxTrace
     | AxTraceSuffix
-    | AxInf
+    (*| AxInf*)
     | AxNextOut
     | AxNextPFun
     | AxNextInj
@@ -124,24 +129,24 @@ Module LTL.
     | AxPrevInj
     | AxAtomicProp (ap : AP ltlsig) (* defines a potentially infinite class of axioms *)
     .
-Check patt_partial_function_injective.
+
     Definition axiom(name : AxiomName) : @Pattern signature :=
       match name with
       | AxImportedDefinedness name' => Definedness.axiom name'
                                                          
       | AxPrev
           (* TODO make `and` bind tighter than `∃,` *)
-        => (prev x == (∃, (b0 and (x ∈ ∘b0 ))))%ml
+        => (patt_prev x == (∃, (b0 and (x ∈ ∘b0 ))))%ml
                                             
       | AxTrace
         => (∃,([[ Trace ]] == b0))%ml
                                          
       | AxTraceSuffix
-        => ([[ TraceSuffix ]] == (μ, ([[ Trace ]] or (prev B0))))%ml
-
+        => ([[ TraceSuffix ]] == (μ, ([[ Trace ]] or (patt_prev B0))))%ml
+(*
       | AxInf
         => ([[ TraceSuffix ]] ⊆ ∘ ([[ TraceSuffix ]]))%ml
-
+*)
       | AxNextOut
         => ((∘(¬([[ TraceSuffix ]]))) ⊆ (¬ [[ TraceSuffix ]]))%ml
 
@@ -195,6 +200,9 @@ Check patt_partial_function_injective.
       Definition Mprev m := app_ext (sym_interp sym_prev) (Ensembles.Singleton (Domain M) m).
       Definition Mprev_ext (A : Power (Domain M)) : Power (Domain M) :=
         fun (e : Domain M) => exists (m : Domain M), Ensembles.In (Domain M) A m /\ Ensembles.In (Domain M) (Mprev m) e.
+      Definition MTrace ρₑ ρₛ := @pattern_interpretation _ M ρₑ ρₛ [[ Trace ]].
+      Definition MTrSuf ρₑ ρₛ := @pattern_interpretation _ M ρₑ ρₛ [[ TraceSuffix ]].
+      
 
       (* TODO generalized version in the library *)
       Lemma Mnext_Mprev_inversions : forall (m1 m2 : Domain M),
@@ -209,7 +217,7 @@ Check patt_partial_function_injective.
         specialize (Hprev evar_val svar_val).
         apply equal_iff_interpr_same in Hprev. 2: auto.
         unfold Same_set in Hprev. unfold Included in Hprev. unfold In in Hprev.
-        unfold prev in Hprev.
+        unfold patt_prev in Hprev.
         rewrite pattern_interpretation_app_simpl in Hprev.
         unfold sym in Hprev.
         rewrite pattern_interpretation_sym_simpl in Hprev.
@@ -259,7 +267,7 @@ Check patt_partial_function_injective.
         unfold x at 3.
         rewrite -> evar_open_free_evar.
         rewrite <- free_evar_in_patt. 2: auto.
-        rewrite [∘ patt_free_evar _] /next.
+        rewrite [∘ patt_free_evar _] /patt_next.
         rewrite -> pattern_interpretation_app_simpl.
         rewrite /Mnext.
         unfold sym.
@@ -281,15 +289,48 @@ Check patt_partial_function_injective.
 
       (* We may use this to represent partial functions *)
       Definition empty_or_singleton S := S = Empty \/ exists m', S = Ensembles.Singleton (Domain M) m'.
+
+      Lemma MTrace_independent ρₑ₁ ρₛ₁ ρₑ₂ ρₛ₂:
+        MTrace ρₑ₁ ρₛ₁ = MTrace ρₑ₂ ρₛ₂.
+      Proof.
+        rewrite /MTrace.
+        rewrite /patt_inhabitant_set.
+        rewrite 2!pattern_interpretation_app_simpl.
+        rewrite /Sorts.sym.
+        unfold Trace.
+        rewrite !pattern_interpretation_sym_simpl.
+        reflexivity.
+      Qed.
+
+      Lemma MTrSuf_independent ρₑ₁ ρₛ₁ ρₑ₂ ρₛ₂:
+        MTrSuf ρₑ₁ ρₛ₁ = MTrSuf ρₑ₂ ρₛ₂.
+      Proof.
+        rewrite /MTrSuf.
+        rewrite /patt_inhabitant_set.
+        rewrite 2!pattern_interpretation_app_simpl.
+        rewrite /Sorts.sym.
+        unfold Trace.
+        rewrite !pattern_interpretation_sym_simpl.
+        reflexivity.
+      Qed.      
       
     End basics.
 
     (* Conversion function *)
     Fixpoint L2M (f: @ltl.Formula ltlsig) : Pattern :=
       match f with
-      | _ => patt_bott
+      | f_atomic a => sym (sym_a a)
+      | f_neg f' => patt_not (L2M f')
+      | f_and f₁ f₂ => patt_and (L2M f₁) (L2M f₂)
+      | f_next f' => patt_next (L2M f')
+      | f_until f₁ f₂ => patt_until (L2M f₁) (L2M f₂)
       end.
-      
+
+    Section with_model.
+      Context {M : Model}.
+      Hypothesis M_satisfies_theory : M ⊨ᵀ theory.
+
+    End with_model.
     
   End LTL.
 
