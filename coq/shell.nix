@@ -13,7 +13,10 @@ let
 
 
   self = mkShell {
-    buildInputs = [coq-matching-logic];
+    buildInputs = [
+      coq-matching-logic
+      pkgs.bashInteractive
+    ];
   };
 in
   self
