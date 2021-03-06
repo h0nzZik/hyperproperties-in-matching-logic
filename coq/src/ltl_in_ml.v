@@ -8,13 +8,14 @@ From Coq.Logic Require Import FunctionalExtensionality.
 From stdpp Require Import sets.
 
 Require Import ltl.
-From MatchingLogic Require Import Logic Theories.Definedness Theories.Sorts SignatureHelper.
+From MatchingLogic Require Import Logic DerivedOperators Theories.Definedness Theories.Sorts SignatureHelper.
 
 Import BoundVarSugar.
 
 Module LTL.
   Import MatchingLogic.Syntax.Notations.
   Import MatchingLogic.Semantics.Notations.
+  Import MatchingLogic.DerivedOperators.Notations.
   
   Section LTL.
     (* We are parametrized with a set of atomic proposition. *)
