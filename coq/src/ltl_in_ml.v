@@ -123,6 +123,7 @@ Module LTL.
     | AxTrace
     | AxTraceSuffix
     (*| AxInf*)
+    | AxNoConfusion
     | AxNextOut
     | AxNextPFun
     | AxNextInj
@@ -147,7 +148,9 @@ Module LTL.
 (*
       | AxInf
         => ([[ TraceSuffix ]] ⊆ ∘ ([[ TraceSuffix ]]))%ml
-*)
+ *)
+      | AxNoConfusion
+        => ([[ Trace ]] and (patt_prev [[ TraceSuffix ]])) == ⊥
       | AxNextOut
         => ((∘(¬([[ TraceSuffix ]]))) ⊆ (¬ [[ TraceSuffix ]]))%ml
 
@@ -327,6 +330,45 @@ Module LTL.
       | f_until f₁ f₂ => patt_until (L2M f₁) (L2M f₂)
       end.
 
+    
+    Section ltlmodeltomlmodel.
+      Context {LM : @ltl.Model ltlsig}.
+
+      Inductive L2M_Carrier :=
+      | car_nat (n : nat)
+      | car_def | car_inh | car_Trace
+      | car_TrSuf | car_next | car_prev.
+
+      Definition L2M_sym_interp (sym : Symbols) : Ensemble L2M_Carrier :=
+        match sym with
+        | sym_import_definedness definedness
+          => Ensembles.Singleton _ car_def
+        | sym_import_sorts inhabitant
+          => Ensembles.Singleton _ car_inh
+        | sym_SortTrace
+          => Ensembles.Singleton _ car_Trace
+        | sym_SortTraceSuffix
+          => Ensembles.Singleton _ car_TrSuf
+        | sym_next
+          => Ensembles.Singleton _ car_next
+        | sym_prev
+          => Ensembles.Singleton _ car_prev
+        | sym_a a
+          => fun m =>
+               match m with
+               | car_nat n => LM n a
+               | _ => False
+               end
+        end.
+        
+                                                         
+        
+      
+      Definition LTLModelToMLModel (lm : @ltl.Model ltlsig) : Model.
+
+    End ltlmodeltomlmodel.
+    
+    
     Section with_model.
       Context {M : Model}.
       Hypothesis M_satisfies_theory : M ⊨ᵀ theory.
