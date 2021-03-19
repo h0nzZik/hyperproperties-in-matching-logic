@@ -5,10 +5,10 @@
         "homepage": null,
         "owner": "harp-project",
         "repo": "AML-Formalization",
-        "rev": "d9f7924459cab8d8a361a9a853ea4a9869427200",
-        "sha256": "1qnsvk3fwb8fhw6cgzkl74pkgwpbrk9xbd3qcwabj9a60v35yfnb",
+        "rev": "c7638beb8c6561462a37ff1660be1494dc105fe1",
+        "sha256": "0flslp0yvxziki15mxrmbyfsf7lrcccrnqv4bjh6qbnjvzz6mcm0",
         "type": "tarball",
-        "url": "https://github.com/harp-project/AML-Formalization/archive/d9f7924459cab8d8a361a9a853ea4a9869427200.tar.gz",
+        "url": "https://github.com/harp-project/AML-Formalization/archive/c7638beb8c6561462a37ff1660be1494dc105fe1.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {
