@@ -321,13 +321,13 @@ Module LTL.
     End basics.
 
     (* Conversion function *)
-    Fixpoint L2M (f: @ltl.Formula ltlsig) : Pattern :=
+    Fixpoint L2M_ϕ (f: @ltl.Formula ltlsig) : Pattern :=
       match f with
       | f_atomic a => sym (sym_a a)
-      | f_neg f' => patt_not (L2M f')
-      | f_and f₁ f₂ => patt_and (L2M f₁) (L2M f₂)
-      | f_next f' => patt_next (L2M f')
-      | f_until f₁ f₂ => patt_until (L2M f₁) (L2M f₂)
+      | f_neg f' => patt_not (L2M_ϕ f')
+      | f_and f₁ f₂ => patt_and (L2M_ϕ f₁) (L2M_ϕ f₂)
+      | f_next f' => patt_next (L2M_ϕ f')
+      | f_until f₁ f₂ => patt_until (L2M_ϕ f₁) (L2M_ϕ f₂)
       end.
 
     
@@ -338,6 +338,14 @@ Module LTL.
       | car_nat (n : nat)
       | car_def | car_inh | car_Trace
       | car_TrSuf | car_next | car_prev.
+
+      Lemma L2M_Carrier_eqdec : EqDecision L2M_Carrier.
+      Proof.
+        intros x y.
+        unfold Decision.
+        decide equality.
+        decide equality.
+      Qed.
 
       Definition L2M_sym_interp (sym : Symbols) : Ensemble L2M_Carrier :=
         match sym with
@@ -360,11 +368,44 @@ Module LTL.
                | _ => False
                end
         end.
-        
-                                                         
-        
-      
-      Definition LTLModelToMLModel (lm : @ltl.Model ltlsig) : Model.
+
+      Definition L2M_app_interp (x y : L2M_Carrier) : Ensemble L2M_Carrier :=
+        match x, y with
+        | car_def, _
+          => Full_set _
+               
+        | car_inh, car_Trace
+          => fun m =>
+               match m with
+               | car_nat n => n = 0
+               | _ => False
+               end
+        | car_inh, car_TrSuf
+          => fun m =>
+               match m with
+               | car_nat _ => True
+               | _ => False
+               end
+
+        | car_next, car_nat 0
+          => Empty_set _
+
+        | car_next, car_nat (S n)
+          => Ensembles.Singleton _ (car_nat n)
+
+        | car_prev, car_nat n
+          => Ensembles.Singleton _ (car_nat (S n))
+          
+        | _, _ => Empty_set _
+        end.
+
+      Definition L2M_Mod : Model :=
+        {| Domain := L2M_Carrier ;
+           nonempty_witness := car_def ;
+           Domain_eq_dec := L2M_Carrier_eqdec ;
+           app_interp := L2M_app_interp ;
+           sym_interp := L2M_sym_interp ;
+        |}.
 
     End ltlmodeltomlmodel.
     
