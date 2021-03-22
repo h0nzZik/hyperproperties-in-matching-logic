@@ -212,7 +212,7 @@ Module LTL.
       Lemma Mnext_Mprev_inversions : forall (m1 m2 : Domain M),
           Ensembles.In (Domain M) (Mnext m2) m1 <-> Ensembles.In (Domain M) (Mprev m1) m2.
       Proof.
-        pose proof (Hprev := satisfies_theory_impl_satisfies_named_axiom M_satisfies_theory AxPrev).
+        pose proof (Hprev := proj1 (satisfies_theory_iff_satisfies_named_axioms named_axioms M) M_satisfies_theory AxPrev).
         cbn in Hprev.
         unfold satisfies_model in Hprev.
         intros.
@@ -406,6 +406,13 @@ Module LTL.
            app_interp := L2M_app_interp ;
            sym_interp := L2M_sym_interp ;
         |}.
+
+      Lemma L2M_Mod_satisfies_theory : L2M_Mod ⊨ᵀ theory.
+      Proof.
+        Print theory.
+        Search theory_of_NamedAxioms.
+      Abort.
+      
 
     End ltlmodeltomlmodel.
     
