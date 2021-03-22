@@ -138,7 +138,8 @@ Module LTL.
                                                          
       | AxPrev
           (* TODO make `and` bind tighter than `∃,` *)
-        => (patt_prev x == (∃, (b0 and (x ∈ ∘b0 ))))%ml
+        (* => (patt_prev x == (∃, (b0 and (x ∈ ∘b0 ))))%ml*)
+        => patt_eq_inversion_of (sym sym_prev) (sym sym_next)
                                             
       | AxTrace
         => (∃,([[ Trace ]] == b0))%ml
@@ -219,78 +220,9 @@ Module LTL.
         remember ((fun x : evar_name => m1)) as evar_val.
         remember (fun X : svar_name => Empty_set (Domain M)) as svar_val.
         specialize (Hprev evar_val svar_val).
-        apply equal_iff_interpr_same in Hprev. 2: auto.
-        unfold Same_set in Hprev. unfold Included in Hprev. unfold In in Hprev.
-        unfold patt_prev in Hprev.
-        rewrite pattern_interpretation_app_simpl in Hprev.
-        unfold sym in Hprev.
-        rewrite pattern_interpretation_sym_simpl in Hprev.
-        unfold LTL.x in Hprev.
-        rewrite pattern_interpretation_free_evar_simpl in Hprev.
-        fold LTL.x in Hprev. subst. simpl in Hprev.
-        fold (Mprev m1) in Hprev.
-
-        remember ((fun x : evar_name => m1)) as evar_val.
-        remember (fun X : svar_name => Empty_set (Domain M)) as svar_val.
-        pose proof (Hbuild := @pattern_interpretation_set_builder signature M (x ∈ ∘ b0) evar_val svar_val).
-        cbn zeta in Hbuild.
-        fold signature in *.
-        rewrite -> Hbuild in Hprev.
-        2: { unfold signature in *.
-             autorewrite with ml_db. simpl.
-             apply T_predicate_in. auto.
-        }
-        
-        (* TODO make `simpl` not simplify ands, ors etc to implications *)
-        (* TODO make a hint database to solve M_predicate goals *)
-        (* TODO solve M |= theory automatically *)
-        autorewrite with ml_db in Hprev.
-
-        (* simplify Hprev, but not too much *)
-        cbn delta in Hprev.
-        move: Hprev.
-        rewrite [PeanoNat.Nat.eqb 0 0]/=.
-        cbv iota.
-        move=> Hprev.
-        clear Hbuild.
-
-        unfold Ensembles.In.
-        rewrite -> Hprev.
-        Check free_evar_in_patt.
-        (*autorewrite with ml_db.*)
-        (*simpl.*)
-        (*unfold fresh_evar at 3.*)
-        Search evar_open patt_in.
-        unfold signature in *.
-        (*rewrite -> evar_open_in.*)
-        (*Set Printing Implicit.*)
-        remember (evar_open 0 (fresh_evar (x ∈ ∘ b0)) x) as y.
-        unfold signature in Heqy. (* This is really annoying! *)
-        rewrite <- Heqy. (* just a test *)
-        rewrite -> Heqy.
-        unfold x at 3.
-        rewrite -> evar_open_free_evar.
-        rewrite <- free_evar_in_patt. 2: auto.
-        rewrite [∘ patt_free_evar _] /patt_next.
-        rewrite -> pattern_interpretation_app_simpl.
-        rewrite /Mnext.
-        unfold sym.
-        rewrite -> pattern_interpretation_sym_simpl.
-        unfold In.
-        rewrite -> pattern_interpretation_free_evar_simpl.
-        rewrite -> update_evar_val_same.
-        
-        unfold fresh_evar. simpl.
-        repeat rewrite -> union_empty_r_L.
-        rewrite -> union_empty_l_L.
-        rewrite -> update_evar_val_neq.
-        2: {
-          eapply extralibrary.notin_cons_l.
-          apply find_fresh_evar_name'_is_fresh.
-        }
-        subst evar_val. unfold Ensembles.In. auto.
-      Qed.
-
+        unfold patt_eq_inversion_of in Hprev.
+      Abort.
+      
       (* We may use this to represent partial functions *)
       Definition empty_or_singleton S := S = Empty \/ exists m', S = Ensembles.Singleton (Domain M) m'.
 
@@ -407,10 +339,67 @@ Module LTL.
            sym_interp := L2M_sym_interp ;
         |}.
 
+
+      Lemma L2M_Mod_satisfies_definedness_named:
+        L2M_Mod ⊨ᴹ Definedness.axiom AxDefinedness.
+      Proof.
+        apply single_element_definedness_impl_satisfies_definedness.
+        exists car_def. simpl. auto.
+      Qed.
+      
+      
+      Lemma L2M_Mod_satisfies_definedness_theory: L2M_Mod ⊨ᵀ Definedness.theory.
+      Proof.
+        unfold Definedness.theory.
+        Search theory_of_NamedAxioms.
+        apply satisfies_theory_iff_satisfies_named_axioms.
+        intros n. destruct n.
+        apply L2M_Mod_satisfies_definedness_named.
+      Qed.
+      
       Lemma L2M_Mod_satisfies_theory : L2M_Mod ⊨ᵀ theory.
       Proof.
-        Print theory.
-        Search theory_of_NamedAxioms.
+        apply satisfies_theory_iff_satisfies_named_axioms.
+        intros n. unfold named_axioms in n. simpl in n.
+        destruct n.
+        - (* Definedness *)
+          simpl.
+          destruct name.
+          apply L2M_Mod_satisfies_definedness_named.
+        - (* Prev *)
+          simpl.
+          unfold "⊨ᴹ".
+          intros ρₑ ρₛ.
+          apply pattern_interpretation_eq_inversion_of.
+          { apply L2M_Mod_satisfies_definedness_theory. }
+          intros m₁ m₂.
+          unfold rel_of.
+          rewrite 2!pattern_interpretation_sym_simpl.
+          simpl.
+          unfold app_ext.
+          split.
+          + intros [le [m [H1 [H2 H3] ] ] ].
+            inversion H1. inversion H2. subst. clear H1 H2.
+            simpl in H3.
+            exists car_next. simpl.
+            exists m₂.
+            split.
+            { constructor. }
+            split.
+            { constructor. }
+            destruct m,m₂; try inversion H3.
+            constructor.
+          + intros [le [re [H1 [H2 H3 ] ] ] ].
+            inversion H1. inversion H2. subst. clear H1 H2.
+            simpl in H3.
+            exists car_prev. exists m₁. simpl.
+            split.
+            { constructor. }
+            split.
+            { constructor. }
+            destruct re,m₁; try destruct n; try inversion H3.
+            constructor.
+        - (* Trace *)
       Abort.
       
 
