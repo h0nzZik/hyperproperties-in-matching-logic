@@ -44,6 +44,11 @@ Module LTL.
     Instance signature : Signature := @SignatureFromSymbols symbols_H.
     Arguments signature : simpl never. (* does not really help :-( *)
 
+    Locate sym.
+    Check symbols_H.
+    Print SymbolsH.
+    Check sym.
+
     Instance definedness_syntax : Definedness.Syntax :=
       {|
          Definedness.inj := sym_import_definedness;
@@ -347,7 +352,6 @@ Module LTL.
         exists car_def. simpl. auto.
       Qed.
       
-      
       Lemma L2M_Mod_satisfies_definedness_theory: L2M_Mod ⊨ᵀ Definedness.theory.
       Proof.
         unfold Definedness.theory.
@@ -356,18 +360,10 @@ Module LTL.
         intros n. destruct n.
         apply L2M_Mod_satisfies_definedness_named.
       Qed.
-      
-      Lemma L2M_Mod_satisfies_theory : L2M_Mod ⊨ᵀ theory.
+
+      Lemma L2M_Mod_satisfies_axiom_prev:
+        L2M_Mod ⊨ᴹ patt_eq_inversion_of (sym sym_prev) (sym sym_next).
       Proof.
-        apply satisfies_theory_iff_satisfies_named_axioms.
-        intros n. unfold named_axioms in n. simpl in n.
-        destruct n.
-        - (* Definedness *)
-          simpl.
-          destruct name.
-          apply L2M_Mod_satisfies_definedness_named.
-        - (* Prev *)
-          simpl.
           unfold "⊨ᴹ".
           intros ρₑ ρₛ.
           apply pattern_interpretation_eq_inversion_of.
@@ -399,8 +395,43 @@ Module LTL.
             { constructor. }
             destruct re,m₁; try destruct n; try inversion H3.
             constructor.
+      Qed.
+
+      Lemma L2M_Mod_satisfies_axiom_trace:
+        L2M_Mod ⊨ᴹ (∃, ([[Trace]] == b0)).
+      Proof.
+        intros ρₑ ρₛ.
+        Search pattern_interpretation patt_exists Full.
+        rewrite pattern_interpretation_exists_predicate_full.
+        2: { rewrite simpl_evar_open.
+             apply T_predicate_equals.
+             apply L2M_Mod_satisfies_definedness_theory.
+        }
+        Unset Printing Notations.
+        simpl.
+        Set Printing Implicit.
+        remember (fresh_evar (patt_inhabitant_set (sym sym_SortTrace) == b0)) as x.
+                
+              
+      
+      Lemma L2M_Mod_satisfies_theory : L2M_Mod ⊨ᵀ theory.
+      Proof.
+        apply satisfies_theory_iff_satisfies_named_axioms.
+        intros n. unfold named_axioms in n. simpl in n.
+        destruct n.
+        - (* Definedness *)
+          simpl.
+          destruct name.
+          apply L2M_Mod_satisfies_definedness_named.
+        - (* Prev *)
+          simpl.
+          apply L2M_Mod_satisfies_axiom_prev.
         - (* Trace *)
+          simpl.
+
       Abort.
+
+      Locate zip_with.
       
 
     End ltlmodeltomlmodel.
