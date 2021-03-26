@@ -5,10 +5,10 @@
         "homepage": null,
         "owner": "harp-project",
         "repo": "AML-Formalization",
-        "rev": "360762e36ea5ae9f509b39021e29fd514f14a994",
-        "sha256": "1s1x1n2ji81q6vh71j4yllalgxsfj2mi9jbwqw280ig6aad29qp0",
+        "rev": "3bec86df9bd8b183e50a2b394bc2293f55b3683e",
+        "sha256": "1n4adv9008cgdf94gax6v0lw95b8ds8rjyl2mg7jigz373r55wn4",
         "type": "tarball",
-        "url": "https://github.com/harp-project/AML-Formalization/archive/360762e36ea5ae9f509b39021e29fd514f14a994.tar.gz",
+        "url": "https://github.com/harp-project/AML-Formalization/archive/3bec86df9bd8b183e50a2b394bc2293f55b3683e.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {
@@ -29,10 +29,10 @@
         "homepage": "",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "462c6fe4b115804ea4d5bee7103c0f46ff9f9cfb",
-        "sha256": "0a4bdaxjrds6kyw9s3r2vbc96f7glgy5n03jk4zr5z8h3j4v2s81",
+        "rev": "1eea37190739485a01f5036558cd2ff257985678",
+        "sha256": "1yqzv172khcb7nkwfq53iixpfm2689zy7k7pmbxyhzimmy64l06j",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/462c6fe4b115804ea4d5bee7103c0f46ff9f9cfb.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/1eea37190739485a01f5036558cd2ff257985678.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

@@ -40,14 +40,9 @@ Module LTL.
     Qed.
 
 
-    Instance symbols_H : SymbolsH := {| SHSymbols := Symbols; SHSymbols_dec := Symbols_dec; |}.
-    Instance signature : Signature := @SignatureFromSymbols symbols_H.
+    Instance symbols_H : SymbolsH Symbols := {| SHSymbols_eqdec := Symbols_dec; |}.
+    Instance signature : Signature := @SignatureFromSymbols _ symbols_H.
     Arguments signature : simpl never. (* does not really help :-( *)
-
-    Locate sym.
-    Check symbols_H.
-    Print SymbolsH.
-    Check sym.
 
     Instance definedness_syntax : Definedness.Syntax :=
       {|
@@ -407,12 +402,39 @@ Module LTL.
              apply T_predicate_equals.
              apply L2M_Mod_satisfies_definedness_theory.
         }
-        Unset Printing Notations.
+        exists (car_nat 0).
+        remember (fresh_evar ([[Trace]] == b0)) as x.
+        rewrite -Heqx.
+        rewrite simpl_evar_open.
+        rewrite [evar_open 0 x b0]/=.
+        Search pattern_interpretation patt_equal Full.
+        rewrite equal_iff_interpr_same.
+        2: { apply L2M_Mod_satisfies_definedness_theory. }
+        rewrite [evar_open 0 x [[Trace]]]/=.
+        rewrite pattern_interpretation_free_evar_simpl.
+        rewrite pattern_interpretation_app_simpl.
+        rewrite 2!pattern_interpretation_sym_simpl.
         simpl.
-        Set Printing Implicit.
-        remember (fresh_evar (patt_inhabitant_set (sym sym_SortTrace) == b0)) as x.
-                
-              
+        unfold app_ext.
+        apply Ensembles_Ext.Same_set_to_eq.
+        split.
+        - intros e [e1 [e2 [H1 [H2 H3] ] ] ].
+          inversion H1. inversion H2. clear H1 H2. subst.
+          unfold Ensembles.In.
+          rewrite update_evar_val_same.
+          simpl in H3. destruct e; subst; try constructor; try inversion H3.
+        - intros e H.
+          inversion H. clear H. subst e.
+          rewrite update_evar_val_same.
+          unfold Ensembles.In.
+          exists car_inh. exists car_Trace.
+          split.
+          { constructor. }
+          split.
+          { constructor. }
+          simpl.
+          reflexivity.
+      Qed.        
       
       Lemma L2M_Mod_satisfies_theory : L2M_Mod ⊨ᵀ theory.
       Proof.
@@ -428,11 +450,9 @@ Module LTL.
           apply L2M_Mod_satisfies_axiom_prev.
         - (* Trace *)
           simpl.
+          apply L2M_Mod_satisfies_axiom_trace.
 
       Abort.
-
-      Locate zip_with.
-      
 
     End ltlmodeltomlmodel.
     
